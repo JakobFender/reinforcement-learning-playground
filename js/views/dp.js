@@ -61,6 +61,7 @@
     let phase; // 'evaluate' | 'done' | 'diverged'
     let evalSweeps;
     let hover = null;
+    let selected = null;
     let geom = null;
 
     function reset() {
@@ -118,7 +119,7 @@
     const c = L.controls;
     c.append(UI.heading('Environment'));
     UI.gridControls(c, state, (kind) => {
-      if (kind === 'env') hover = null;
+      if (kind === 'env') hover = selected = null;
       reset();
     });
 
@@ -192,10 +193,15 @@
         numbers: showV ? V : null,
         policy: showP ? arrows : null,
         hover,
+        selected,
       });
     });
     UI.attachGridEditor(L.canvas, state, () => geom, () => reset(), (s) => {
+      if (s === hover) return;
       hover = s;
+      surface.draw();
+    }, (s) => {
+      selected = s === selected ? null : s;
       render();
     });
 
@@ -213,13 +219,13 @@
       method === 'policy'
         ? 'Each spike is a policy improvement: the new policy has different values, so evaluation starts moving again. Dotted lines mark improvements.'
         : `Sweeps stop once Δ falls below θ. With γ &lt; 1 the error shrinks at least by a factor γ per sweep${method === 'value' ? '' : ' (a contraction)'}.`;
-    const m2 = UI.mini(L.grid, 'One Bellman backup', '', { meta: 'hover a cell' });
+    const m2 = UI.mini(L.grid, 'One Bellman backup', '', { meta: 'click a cell' });
     const p2 = new Plot(m2.canvas, { margin: { left: 48 } });
-    m2.note.innerHTML = 'For the hovered state (or the start): the value of each action, r + γ v(s′) averaged over outcomes. <span class="key"></span>v(s)';
+    m2.note.innerHTML = 'For the selected state (or the start): the value of each action, r + γ v(s′) averaged over outcomes. <span class="key"></span>v(s)';
 
     function backupState() {
       const env = state.env;
-      if (hover != null && env.isState(hover) && !env.isTerminal(hover)) return hover;
+      if (selected != null && env.isState(selected) && !env.isTerminal(selected)) return selected;
       if (env.starts.length) return env.starts[0];
       for (let s = 0; s < env.nS; s++) if (env.isState(s) && !env.isTerminal(s)) return s;
       return null;
@@ -243,7 +249,7 @@
         { label: 'Δ', value: deltas.length ? UI.fmt(deltas[deltas.length - 1], 2) : '–' },
       ];
       if (method === 'policy') items.push({ label: 'Improvements', value: String(improvements.length) });
-      if (s0 != null) items.push({ label: hover != null && hover === s0 ? 'v(hovered)' : env.starts.length ? 'v(start)' : 'v(s)', value: UI.fmt(V[s0], 4), accent: true });
+      if (s0 != null) items.push({ label: selected != null && selected === s0 ? 'v(selected)' : env.starts.length ? 'v(start)' : 'v(s)', value: UI.fmt(V[s0], 4), accent: true });
       L.setReadout(items);
 
       if (phase === 'diverged') {

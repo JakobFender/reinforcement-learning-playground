@@ -163,7 +163,17 @@
         rootWeights: last && last.s != null ? { s: last.s, w: last.counts } : null,
       });
     });
-    UI.attachGridEditor(L.canvas, state, () => geom, () => reset());
+    // Selecting a cell moves the agent there: the next search plans from that state.
+    UI.attachGridEditor(L.canvas, state, () => geom, () => reset(), null, (cell) => {
+      const env = state.env;
+      if (cell == null || !env.isState(cell) || env.isTerminal(cell)) return;
+      s = cell;
+      trail = [s];
+      ret = 0;
+      moves = 0;
+      last = null;
+      render();
+    });
 
     // ----- Minis -----
     const m1 = UI.mini(L.grid, 'Visits per action at the root', '', { meta: 'last move' });
@@ -195,7 +205,7 @@
       if (!env.hasGoal()) status.textContent = 'Add a goal cell so there is something to plan for.';
       else if (last && last.finished) status.innerHTML = last.finished.reached ? `<b>Reached the goal</b> in ${last.finished.moves} moves. A new episode starts from S.` : 'Gave up after 300 moves.';
       else if (last) status.innerHTML = `Chose <b>${RL.ACTIONS[last.action].name}</b> after ${sims} simulations.`;
-      else status.textContent = 'Press Run or Move. Each move runs a fresh search from the agent’s state.';
+      else status.textContent = 'Press Run or Move. Each move runs a fresh search from the agent’s state. Click a cell to put the agent there.';
 
       const labels = RL.ACTIONS.map((a) => a.arrow);
       if (last) {

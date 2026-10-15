@@ -22,7 +22,7 @@ RL
 | Tab | Book | Environment | What you can see |
 |---|---|---|---|
 | ε-greedy, optimistic values, UCB, gradient bandit | §2.2–2.8 | 10-armed testbed (stationary or random-walk q*, optional +4 shift) | Average reward and % optimal action over up to 2,000 runs against a comparison method; estimates vs truth; pulls per arm; the Figure 2.6 parameter study |
-| Policy evaluation, policy iteration, value iteration | §4.1–4.4 | Editable gridworld | Values and arrows per sweep; Δ per sweep (log scale); one Bellman backup for any hovered cell; in-place vs two-array sweeps; modified policy iteration |
+| Policy evaluation, policy iteration, value iteration | §4.1–4.4 | Editable gridworld | Values and arrows per sweep; Δ per sweep (log scale); one Bellman backup for any selected cell; in-place vs two-array sweeps; modified policy iteration |
 | MCTS · AlphaZero-like | §8.11, §16.6 | Editable gridworld | UCT with random rollouts, or PUCT with a value estimate and prior; where each search looked, root visit shares and Q̄ vs q* |
 | Monte Carlo, Sarsa, Expected Sarsa, Q-learning | §5.4, §6.4–6.6 | Editable gridworld | Q(s, a) triangles, greedy policy, visits; return per episode (Figure 6.4) and episodes vs steps (Figure 6.3), with another method trained alongside for comparison |
 | TD(0) | §6.1–6.2 | Five-state random walk (Example 6.2) | TD(0) vs constant-α MC estimates against the true values; RMS error averaged over 100 runs for the book's step sizes and yours |
@@ -31,8 +31,9 @@ RL
 ### Gridworlds
 
 Presets: cliff walking (Example 6.6), windy gridworld (Example 6.5), the Dyna maze (Example 8.1), the 4 × 4 gridworld (Example 4.1)
-and a two-room layout with a pit. Paint walls, goals, cliffs and the start directly on the grid, and set γ and a slip probability
+and a two-room layout with a pit. Pick a brush to paint walls, goals, cliffs and the start directly on the grid, and set γ and a slip probability
 (the chosen action is replaced by a random one), which makes transitions stochastic for the DP methods.
+Clicking a cell selects it by default: the side charts then show that state (in MCTS the agent moves there and plans from it).
 Each step costs −1, a cliff costs −100 and sends you back to the start, and a goal ends the episode.
 
 ## Implementation notes

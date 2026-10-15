@@ -71,6 +71,7 @@
     let agent;
     let shadow;
     let hover = null;
+    let selected = null;
     let geom = null;
     let stepsAtEpisode; // cumulative steps when each episode ended (Figure 6.3)
     let shadowSteps;
@@ -118,6 +119,7 @@
     const c = L.controls;
     c.append(UI.heading('Environment'));
     UI.gridControls(c, state, (kind) => {
+      if (kind === 'env') selected = null;
       if (kind === 'gamma' || kind === 'slip') updateParams();
       else reset();
     });
@@ -188,7 +190,7 @@
     L.tools.append(showSeg.el);
     const surface = new Draw.Surface(L.canvas, (ctx, w, h) => {
       const env = state.env;
-      const o = { hover, agent: agent.s != null ? agent.s : null, trail: agent.s != null ? agent.trajectory : agent.lastEpisode };
+      const o = { hover, selected, agent: agent.s != null ? agent.s : null, trail: agent.s != null ? agent.trajectory : agent.lastEpisode };
       if (state.show === 'q') {
         o.qs = agent.Q;
         o.mask = agent.visits;
@@ -216,8 +218,12 @@
       });
     }
     UI.attachGridEditor(L.canvas, state, () => geom, () => reset(), (s) => {
+      if (s === hover) return;
       hover = s;
-      if (!run.running) render();
+      if (!run.running) surface.draw();
+    }, (s) => {
+      selected = s === selected ? null : s;
+      render();
     });
 
     // ----- Minis -----
@@ -236,9 +242,9 @@
     const m2 = UI.mini(L.grid, 'Episodes vs time steps', '', { meta: 'Figure 6.3' });
     const p2 = new Plot(m2.canvas, { margin: { left: 44 } });
     m2.note.textContent = 'Episodes completed as a function of total steps. The slope gets steeper as episodes get shorter.';
-    const m3 = UI.mini(L.grid, 'Action values', '', { meta: 'hover a cell' });
+    const m3 = UI.mini(L.grid, 'Action values', '', { meta: 'click a cell' });
     const p3 = new Plot(m3.canvas, { margin: { left: 52 } });
-    m3.note.innerHTML = 'Q(s, a) for the hovered state, or the start. The greedy action is olive.';
+    m3.note.innerHTML = 'Q(s, a) for the selected state, or the start. The greedy action is olive.';
 
     function render() {
       surface.draw();
@@ -303,7 +309,7 @@
       p2.set({ x: { min: 0, max: xMax }, y: { min: 0, max: Math.max(5, stepsAtEpisode.length) * 1.05 }, series: s2 });
 
       // Mini 3: Q at a state
-      let s0 = hover != null && env.isState(hover) && !env.isTerminal(hover) ? hover : env.startState(RL.mulberry32(1));
+      let s0 = selected != null && env.isState(selected) && !env.isTerminal(selected) ? selected : env.startState(RL.mulberry32(1));
       if (s0 == null) return;
       const q = Array.from(agent.Q[s0]);
       const best = RL.argmaxAll(q, 1e-9);
