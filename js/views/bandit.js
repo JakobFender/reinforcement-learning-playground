@@ -192,7 +192,7 @@
       margin: { left: 56 },
       onHover: (h) => {
         const t = Math.round(h.x);
-        if (!res || t < 1 || t > state.steps) return null;
+        if (!res || t < 1 || t > res.cfg.steps) return null;
         const get = (r) => (state.view === 'reward' ? UI.fmt(r.reward[t - 1] / Math.max(1, r.done), 3) : `${UI.fmt((100 * r.optimal[t - 1]) / Math.max(1, r.done), 3)}%`);
         const lines = [`<b>step</b> ${t}`, `<b>${RL.banditMethods[method].name}</b> ${get(res.main)}`];
         if (res.cmp) lines.push(`<b>compare</b> ${get(res.cmp)}`);
@@ -206,7 +206,7 @@
       margin: { left: 40 },
       onHover: (h) => {
         const a = Math.round(h.x) - 1;
-        if (!res || !res.main.last || a < 0 || a >= state.k) return null;
+        if (!res || !res.main.last || a < 0 || a >= res.cfg.k) return null;
         const l = res.main.last;
         const lines = [`<b>arm</b> ${a + 1}`, `<b>q*</b> ${UI.fmt(l.q[a])}`];
         if (method === 'gradient') lines.push(`<b>H</b> ${UI.fmt(l.H[a])}`, `<b>π</b> ${UI.fmt(l.pi[a])}`);
@@ -261,20 +261,20 @@
     // ----- Simulation (progressive, a few runs per frame) -----
     let res = null;
 
-    function makeRunner(m, p) {
-      const rng = RL.mulberry32(state.seed);
+    function makeRunner(m, p, cfg) {
+      const rng = RL.mulberry32(cfg.seed);
       return {
         m,
         p,
         rng,
-        reward: new Float64Array(state.steps),
-        optimal: new Float64Array(state.steps),
+        reward: new Float64Array(cfg.steps),
+        optimal: new Float64Array(cfg.steps),
         done: 0,
         last: null,
         oneRun() {
-          const bandit = RL.makeBandit(state.k, rng, { nonstationary: state.nonstationary, offset: state.offset });
-          const agent = RL.createBanditAgent(m, p, state.k, rng);
-          for (let t = 0; t < state.steps; t++) {
+          const bandit = RL.makeBandit(cfg.k, rng, { nonstationary: cfg.nonstationary, offset: cfg.offset });
+          const agent = RL.createBanditAgent(m, p, cfg.k, rng);
+          for (let t = 0; t < cfg.steps; t++) {
             const best = bandit.optimal();
             const a = agent.act();
             const r = bandit.pull(a);
@@ -288,38 +288,48 @@
       };
     }
 
+    // Experiments are computed into `pending` over several frames; the charts only switch to a result
+    // once every run is finished, so they never show a half-averaged, jittery curve.
+    let pending = null;
+
     function restart() {
-      const cmp = COMPARE[state.compare];
-      res = {
-        main: makeRunner(method, Object.assign({}, state.p)),
-        cmp: cmp.method ? makeRunner(cmp.method, Object.assign({}, cmp.p)) : null,
+      const cfg = { steps: state.steps, k: state.k, runs: state.runs, nonstationary: state.nonstationary, offset: state.offset, compare: state.compare, seed: state.seed, p: Object.assign({}, state.p) };
+      const cmp = COMPARE[cfg.compare];
+      pending = {
+        cfg,
+        main: makeRunner(method, cfg.p, cfg),
+        cmp: cmp.method ? makeRunner(cmp.method, Object.assign({}, cmp.p), cfg) : null,
       };
-      render();
+      renderStatus();
     }
 
+    const finished = (r) => r.main.done >= r.cfg.runs && (!r.cmp || r.cmp.done >= r.cfg.runs);
+
     function frame() {
-      let changed = false;
-      if (res && (res.main.done < state.runs || (res.cmp && res.cmp.done < state.runs))) {
+      if (pending) {
         const t0 = performance.now();
-        while (performance.now() - t0 < 14) {
-          if (res.main.done < state.runs) res.main.oneRun();
-          if (res.cmp && res.cmp.done < state.runs) res.cmp.oneRun();
-          if (res.main.done >= state.runs && (!res.cmp || res.cmp.done >= state.runs)) break;
+        while (!finished(pending) && performance.now() - t0 < 14) {
+          if (pending.main.done < pending.cfg.runs) pending.main.oneRun();
+          if (pending.cmp && pending.cmp.done < pending.cfg.runs) pending.cmp.oneRun();
         }
-        changed = true;
+        if (finished(pending)) {
+          res = pending;
+          pending = null;
+          render();
+        } else renderStatus();
       }
       if (study.running) {
         stepStudy();
-        changed = true;
+        if (study.running) m3.meta.textContent = `computing ${study.total - study.queue.length} / ${study.total}`;
+        else render();
       }
-      if (changed) render();
     }
 
     // ----- Parameter study -----
-    const study = { running: false, queue: [], points: [] };
+    const study = { running: false, queue: [], points: [], next: [] };
     function startStudy() {
       study.queue = [];
-      study.points = [];
+      study.next = [];
       for (const s of STUDY) for (const e of s.exps) study.queue.push({ s, x: Math.pow(2, e) });
       study.total = study.queue.length;
       study.running = true;
@@ -333,9 +343,10 @@
         const r = RL.runBandits(s.method, p, { runs: 200, steps: 1000, k: state.k, seed: 7, offset: state.offset, nonstationary: state.nonstationary });
         let sum = 0;
         for (const v of r.avgReward) sum += v;
-        study.points.push({ method: s.method, x, y: sum / r.avgReward.length });
+        study.next.push({ method: s.method, x, y: sum / r.avgReward.length });
       }
       if (!study.queue.length) {
+        study.points = study.next;
         study.running = false;
         studyBtn.disabled = false;
         studyBtn.textContent = 'Run again';
@@ -343,8 +354,22 @@
     }
 
     // ----- Rendering -----
+    function renderStatus() {
+      if (pending) {
+        const r = pending;
+        const total = r.cfg.runs * (r.cmp ? 2 : 1);
+        const done = r.main.done + (r.cmp ? r.cmp.done : 0);
+        status.innerHTML = `Simulating <b>${UI.fmtInt(r.main.done)} / ${UI.fmtInt(r.cfg.runs)}</b> runs… ${Math.round((100 * done) / total)}%`;
+      } else if (res) {
+        status.innerHTML = `Each curve averages ${UI.fmtInt(res.cfg.runs)} runs, each on a freshly drawn bandit with q*(a) ~ N(${res.cfg.offset}, 1).`;
+      }
+      if (!res) plot.set({ x: { min: 1, max: state.steps, integer: true }, y: { min: 0, max: 1.5 }, series: [], message: 'Simulating…' });
+    }
+
     function render() {
+      renderStatus();
       if (!res) return;
+      const cfg = res.cfg;
       const accent = UI.cssColor('--series-1');
       const ink = UI.cssColor('--series-2');
       const muted = UI.cssColor('--series-3');
@@ -373,19 +398,19 @@
       if (state.view === 'optimal') yr = [0, 100];
       else {
         yr = UI.extent(all.length ? all : [[0, 1.5]], 0.08);
-        yr[0] = Math.min(yr[0], state.offset);
+        yr[0] = Math.min(yr[0], cfg.offset);
       }
-      plot.set({ x: { min: 1, max: state.steps, integer: true }, y: { min: yr[0], max: yr[1], zero: true }, series, crosshair: true });
+      plot.set({ x: { min: 1, max: cfg.steps, integer: true }, y: { min: yr[0], max: yr[1], zero: true }, series, crosshair: true });
       const legend = [{ label: RL.banditMethods[method].name, color: accent }];
-      if (res.cmp) legend.push({ label: COMPARE[state.compare].label, color: ink, dashed: true });
+      if (res.cmp) legend.push({ label: COMPARE[cfg.compare].label, color: ink, dashed: true });
       L.setLegend(legend);
 
       // Readout: averages over the final 10% of steps.
-      const tail = Math.max(1, Math.floor(state.steps / 10));
+      const tail = Math.max(1, Math.floor(cfg.steps / 10));
       const avgTail = (r, src, mult) => {
         if (!r || !r.done) return NaN;
         let s = 0;
-        for (let i = state.steps - tail; i < state.steps; i++) s += src[i];
+        for (let i = cfg.steps - tail; i < cfg.steps; i++) s += src[i];
         return (mult * s) / tail / r.done;
       };
       const items = [
@@ -395,10 +420,6 @@
       ];
       if (res.cmp) items.push({ label: 'Compare · reward', value: UI.fmt(avgTail(res.cmp, res.cmp.reward, 1), 3) });
       L.setReadout(items);
-      const running = res.main.done < state.runs || (res.cmp && res.cmp.done < state.runs);
-      status.innerHTML = running
-        ? `Simulating <b>${UI.fmtInt(res.main.done)} / ${UI.fmtInt(state.runs)}</b> runs…`
-        : `Each curve averages ${UI.fmtInt(state.runs)} runs, each on a freshly drawn bandit with q*(a) ~ N(${state.offset}, 1).`;
 
       // Mini 1: estimates vs truth.
       const l = res.main.last;
@@ -407,7 +428,7 @@
         const yr1 = UI.extent([l.q, est, [0]], 0.1);
         const labels = l.q.map((_, i) => String(i + 1));
         p1.set({
-          x: { min: 0.5, max: state.k + 0.5, labels },
+          x: { min: 0.5, max: cfg.k + 0.5, labels },
           y: { min: yr1[0], max: yr1[1], zero: true },
           series: [
             { kind: 'bars', ys: est, color: accent, half: 0.22 },
@@ -416,7 +437,7 @@
         });
         const colors = l.N.map((_, i) => (i === l.best ? accent : muted));
         p2.set({
-          x: { min: 0.5, max: state.k + 0.5, labels },
+          x: { min: 0.5, max: cfg.k + 0.5, labels },
           y: { min: 0, max: Math.max(...l.N) * 1.08 || 1 },
           series: [{ kind: 'bars', ys: l.N, colors, color: muted, half: 0.3 }],
         });
@@ -432,7 +453,7 @@
         ss.push({ kind: 'markers', xs: pts.map((p) => p.x), ys: pts.map((p) => p.y), color: mine ? accent : muted, radius: mine ? 3 : 2 });
       }
       const ys3 = study.points.map((p) => p.y);
-      const yr3 = ys3.length ? UI.extent([ys3], 0.1) : [state.offset + 1, state.offset + 1.6];
+      const yr3 = ys3.length ? UI.extent([ys3], 0.1) : [cfg.offset + 1, cfg.offset + 1.6];
       const curX = state.p[info.study.key];
       const vlines = curX > 0 ? [{ x: curX, color: ink, dash: [3, 3], label: `${info.study.label} = ${UI.fmt(curX, 2)}` }] : [];
       p3.set({
@@ -440,9 +461,9 @@
         y: { min: yr3[0], max: yr3[1] },
         series: ss,
         vlines,
-        message: study.points.length ? null : study.running ? 'Running…' : 'Press “Run parameter study”',
+        message: study.points.length ? null : study.running ? 'Computing…' : 'Press “Run parameter study”',
       });
-      m3.meta.textContent = study.running ? `${study.total - study.queue.length} / ${study.total}` : 'Figure 2.6';
+      if (!study.running) m3.meta.textContent = 'Figure 2.6';
     }
 
     restart();
