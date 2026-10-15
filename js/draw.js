@@ -366,13 +366,22 @@
       ctx.stroke();
     }
 
+    // Selected cell
+    if (opts.selected != null) {
+      const x = ox + (opts.selected % env.cols) * size;
+      const y = oy + Math.floor(opts.selected / env.cols) * size;
+      ctx.strokeStyle = P.text;
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(x + 1.25, y + 1.25, size - 2.5, size - 2.5);
+    }
+
     // Hover
-    if (opts.hover != null) {
+    if (opts.hover != null && opts.hover !== opts.selected) {
       const x = ox + (opts.hover % env.cols) * size;
       const y = oy + Math.floor(opts.hover / env.cols) * size;
-      ctx.strokeStyle = P.text;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x + 0.75, y + 0.75, size - 1.5, size - 1.5);
+      ctx.strokeStyle = P.muted;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
     }
     return g;
   }

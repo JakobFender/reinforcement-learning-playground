@@ -412,6 +412,7 @@
   // ---------------------------------------------------------------------------
 
   const BRUSHES = [
+    ['select', 'Select'],
     ['#', 'Wall'],
     ['G', 'Goal'],
     ['X', 'Cliff'],
@@ -462,45 +463,50 @@
     container.append(params);
 
     const brushWrap = el('div', 'brush');
-    brushWrap.append(el('span', 'meta', 'Click or drag on the grid to paint'));
-    state.brush = state.brush || '#';
+    brushWrap.append(el('span', 'meta', 'Click a cell to inspect it, or pick a brush and drag to paint'));
+    state.brush = state.brush || 'select';
     const brush = segmented(BRUSHES, () => state.brush, (v) => (state.brush = v), 'Brush', true);
     brushWrap.append(brush.el);
     container.append(brushWrap);
     return { sync: () => { sel.sync(); gammaSlider.sync(); slipSlider.sync(); } };
   }
 
-  // Painting on the grid canvas. getGeom() returns the latest gridGeometry. onPaint() after each change.
-  function attachGridEditor(canvas, state, getGeom, onPaint, onHover) {
-    canvas.classList.add('editable');
+  // Clicking the grid selects a cell (brush 'select') or paints with the chosen brush.
+  // getGeom() returns the latest gridGeometry; onPaint() after each change; onSelect(s | null) on a selection click.
+  function attachGridEditor(canvas, state, getGeom, onPaint, onHover, onSelect) {
     let painting = false;
     let last = null;
-    function paint(e) {
+    const cellOf = (e) => {
       const g = getGeom();
-      if (!g) return;
+      if (!g) return null;
       const r = canvas.getBoundingClientRect();
-      const cell = g.cellAt(e.clientX - r.left, e.clientY - r.top);
+      return g.cellAt(e.clientX - r.left, e.clientY - r.top);
+    };
+    function paint(e) {
+      const cell = cellOf(e);
       if (!cell || cell.s === last) return;
       last = cell.s;
       const env = state.env;
       if (env.cell(cell.s) === state.brush) return;
-      // Keep at least one non-wall cell.
       env.setCell(cell.r, cell.c, state.brush);
       onPaint();
     }
     canvas.addEventListener('pointerdown', (e) => {
+      if (state.brush === 'select') {
+        const cell = cellOf(e);
+        if (onSelect) onSelect(cell ? cell.s : null);
+        return;
+      }
       painting = true;
       last = null;
       canvas.setPointerCapture(e.pointerId);
       paint(e);
     });
     canvas.addEventListener('pointermove', (e) => {
+      canvas.style.cursor = state.brush === 'select' ? 'pointer' : 'crosshair';
       if (painting) paint(e);
       if (onHover) {
-        const g = getGeom();
-        if (!g) return;
-        const r = canvas.getBoundingClientRect();
-        const cell = g.cellAt(e.clientX - r.left, e.clientY - r.top);
+        const cell = cellOf(e);
         onHover(cell ? cell.s : null);
       }
     });
