@@ -22,7 +22,7 @@
   --wall: #3A3A40;
 
   /* Fonts */
-  --font-display: 'Fraunces', serif;
+  --font-display: 'Besley', Georgia, serif;
   --font-body: 'Onest', system-ui, sans-serif;
   --font-mono: 'Martian Mono', ui-monospace, monospace;
 
@@ -83,14 +83,15 @@ body {
 
 h1, h2 {
   font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: -0.02em;
-  font-variation-settings: 'SOFT' 100, 'WONK' 1;
+  font-weight: 500;
+  font-style: normal;
+  letter-spacing: -0.01em;
   margin: 0;
 }
-h1 { font-size: 56px; line-height: 1.05; }
-h2 { font-size: 36px; line-height: 1.1; }
-h1 em, h2 em { font-style: italic; color: var(--color-accent); }
+h1 { font-size: 56px; line-height: 1.1; }
+h2 { font-size: 36px; line-height: 1.15; }
+/* No emphasis styling: nothing on this page is highlighted. */
+h1 em, h2 em, h1 i, h2 i { font-family: inherit; font-style: normal; font-weight: inherit; color: inherit; }
 
 button, select, input { font: inherit; color: inherit; }
 
@@ -140,13 +141,12 @@ a:hover { color: var(--color-text); text-decoration-thickness: 2px; }
   color: var(--color-text);
   text-decoration: none;
   font-family: var(--font-display);
-  font-variation-settings: 'SOFT' 100, 'WONK' 1;
+  font-weight: 500;
   font-size: 24px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   line-height: 1;
 }
 .brand:hover { color: var(--color-text); }
-.brand em { font-style: italic; color: var(--color-accent); }
 .brand svg { width: 32px; height: 32px; fill: none; stroke: var(--color-accent); stroke-width: 2; }
 .brand svg .dot { fill: var(--color-text); stroke: none; }
 .topbar .meta { white-space: nowrap; }
@@ -408,13 +408,13 @@ input[type="range"]:hover::-webkit-slider-thumb { transform: scaleX(1.25); }
 .readout dd {
   margin: 0;
   font-family: var(--font-display);
-  font-variation-settings: 'SOFT' 100, 'WONK' 1;
+  font-weight: 500;
   font-size: 28px;
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
-.readout dd.accent { color: var(--color-accent); }
+.readout dd.accent { color: inherit; }
 
 /* ---------- Under the hood ---------- */
 .under { margin-top: var(--space-9); padding-top: var(--space-6); border-top: 1px solid var(--color-line); }
