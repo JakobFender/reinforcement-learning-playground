@@ -369,7 +369,7 @@
     const uh = el('header', 'under-head');
     uh.append(el('p', 'label', '02 — Under the hood'));
     const uh2 = el('h2');
-    uh2.innerHTML = info.underTitle || 'What it <em>learned</em>';
+    uh2.innerHTML = info.underTitle || 'What it learned';
     uh.append(uh2);
     const grid = el('div', info.minis === 2 ? 'mini-grid two' : 'mini-grid');
     under.append(uh, grid);

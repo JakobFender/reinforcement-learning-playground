@@ -16,7 +16,7 @@
         String.raw`\text{MC: } V(S_t) \leftarrow V(S_t) + \alpha\,\big[G_t - V(S_t)\big]`,
       ],
       strip: true,
-      underTitle: 'Which one learns <em>faster</em>?',
+      underTitle: 'Which one learns faster?',
       minis: 2,
       ariaLabel: 'Estimated state values for states A to E',
     });

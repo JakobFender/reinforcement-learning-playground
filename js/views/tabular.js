@@ -52,7 +52,7 @@
     const method = tab.method;
     const info = INFO[method];
     const L = UI.layout(container, tab, Object.assign({}, info, {
-      underTitle: 'How it <em>learns</em>',
+      underTitle: 'How it learns',
       ariaLabel: 'Gridworld with action values, greedy policy and the agent. Click to edit cells.',
     }));
 

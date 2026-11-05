@@ -13,7 +13,7 @@
         String.raw`\text{UCT: } a = \arg\max_a \Big[\, \bar Q(s,a) + c\sqrt{\tfrac{\ln N(s)}{N(s,a)}} \,\Big]`,
         String.raw`\text{PUCT: } a = \arg\max_a \Big[\, \bar Q(s,a) + c\, P(s,a)\tfrac{\sqrt{N(s)}}{1+N(s,a)} \,\Big]`,
       ],
-      underTitle: 'Inside one <em>search</em>',
+      underTitle: 'Inside one search',
       ariaLabel: 'Gridworld with the agent, its path and where the search looked. Click to edit cells.',
     });
 

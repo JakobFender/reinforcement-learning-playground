@@ -35,7 +35,7 @@
     const method = tab.method;
     const info = INFO[method];
     const L = UI.layout(container, tab, Object.assign({}, info, {
-      underTitle: method === 'policy' ? 'How fast it <em>settles</em>' : 'How fast it <em>converges</em>',
+      underTitle: method === 'policy' ? 'How fast it settles' : 'How fast it converges',
       minis: 2,
       ariaLabel: 'Gridworld showing state values and policy arrows. Click to edit cells.',
     }));

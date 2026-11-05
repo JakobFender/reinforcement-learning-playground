@@ -71,7 +71,7 @@
     const method = tab.method;
     const info = INFO[method];
     const L = UI.layout(container, tab, Object.assign({}, info, {
-      underTitle: 'One bandit, <em>up close</em>',
+      underTitle: 'One bandit, up close',
       ariaLabel: 'Learning curve averaged over many runs',
     }));
 

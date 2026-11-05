@@ -43,7 +43,7 @@
     const method = tab.method;
     const info = INFO[method];
     const L = UI.layout(container, tab, Object.assign({}, info, {
-      underTitle: 'What the network <em>thinks</em>',
+      underTitle: 'What the network thinks',
       ariaLabel: 'Cart-pole simulation',
     }));
 
